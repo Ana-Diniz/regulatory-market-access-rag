@@ -1,0 +1,11 @@
+# Ambientes Virtuais
+venv/
+env/
+
+# Chaves e Segredos
+.env
+
+# Banco de Dados Vetorial e Dados Brutos
+chroma_db/
+data/
+__pycache__/
