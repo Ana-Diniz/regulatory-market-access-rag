@@ -22,30 +22,29 @@ def buscar_contexto(pergunta):
     vector_db = Chroma(persist_directory="./chroma_db", embedding_function=modelo_embedding)
     
     # Recupera os 4 trechos mais relevantes do PDF
-    resultados = vector_db.similarity_search(pergunta, k=4)
+    resultados = vector_db.similarity_search(pergunta, k=6)
     return resultados
 
-# 4. Orquestração do RAG e Extração
+
+# 4. Orquestração do RAG e Extração//Alteração na query_vetorial e prompt
 def extrair_dados():
-    pergunta = "Qual medicamento está sendo avaliado neste relatório, de que ano é o documento, e qual foi a recomendação final de incorporação (desfecho)?"
+    # 1. A string de busca foca em encontrar as páginas onde o dado real está (o Resumo Executivo)
+    query_vetorial = "RESUMO EXECUTIVO tecnologia indicação recomendação final incorporação SUS"
     
-    # Busca os chunks no ChromaDB
-    documentos_recuperados = buscar_contexto(pergunta)
+    # Busca os chunks no ChromaDB usando as palavras-chave
+    documentos_recuperados = buscar_contexto(query_vetorial)
     contexto_junto = "\n\n".join([doc.page_content for doc in documentos_recuperados])
 
-    print("Enviando contexto para o modelo Llama-3 processar via Groq...")
+    print("Enviando contexto para o modelo processar via Groq...")
     
-    # Inicializa o modelo rápido da Groq
     llm = ChatGroq(model="qwen/qwen3.8-27b", temperature=0)
-    # Força o modelo a respeitar nosso Schema Pydantic
     llm_estruturado = llm.with_structured_output(DecisaoRegulatoria)
 
-    # Cria o Prompt rigoroso contra alucinações
+    # 2. O Prompt foca em dar a ordem rigorosa ao modelo
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "Você é um analista de regulação de saúde (Market Access). Responda APENAS com base no contexto fornecido. Extraia as informações solicitadas com precisão e brevidade."),
-        ("user", "Contexto encontrado no acervo:\n{contexto}\n\nExtraia as informações solicitadas.")
+        ("system", "Você é um analista de Market Access. Responda APENAS com base no contexto fornecido. Extraia o nome da tecnologia/medicamento, o ano da publicação do relatório e o desfecho da recomendação."),
+        ("user", "Contexto encontrado no acervo:\n{contexto}\n\nPreencha os dados solicitados.")
     ])
-
     # Conecta o prompt com o modelo estruturado
     chain = prompt | llm_estruturado
 
