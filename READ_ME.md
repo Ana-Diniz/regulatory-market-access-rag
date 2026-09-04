@@ -13,6 +13,20 @@ In Market Access, regulatory decisions are buried inside hundreds of dense, unst
 - **Orchestration & LLM:** `LangChain` routing context to `Groq` API (Qwen 2.5).
 - **Data Modeling:** Strict enforcement of entity schemas using `Pydantic` to eliminate hallucinations and generate structured outputs.
 
+## 🟢 Current Status (Phase 1 Completed)
+
+The core pipeline is fully functional with isolated data ingestion and structured extraction.
+
+- **Traceability:** Successfully implemented metadata injection during chunking to trace every extracted data point back to its original PDF page.
+- **Private Vector Search:** Local ChromaDB instance is successfully building and querying vector embeddings.
+- **Advanced RAG Optimization:** Diagnosed and resolved "Context Poisoning" and LLM hallucination issues by decoupling the _Retrieval Query_ (optimized for keyword matching on the Executive Summary) from the _System Prompt_ (optimized for strict Pydantic schema enforcement).
+
+## 🟡 Roadmap (Phase 2 & 3)
+
+- [ ] **Relational Persistence:** Implement SQLite to store the validated JSON extractions, creating a factual database.
+- [ ] **Human-in-the-Loop UI:** Build a Streamlit application to allow human auditing and correction of the extracted data before database insertion.
+- [ ] **Analytics Dashboard:** Generate visualizations directly from the SQLite relational database for Market Access intelligence.
+
 ## ⚙️ How to Run
 
 1. Clone this repository.
