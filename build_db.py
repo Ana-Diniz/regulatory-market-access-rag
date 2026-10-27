@@ -1,50 +1,48 @@
-from ingest import processar_pdf
-from langchain_huggingface import HuggingFaceEmbeddings
+"""Index PDF reports in a local Chroma collection."""
+import argparse
+from pathlib import Path
+
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-import os
+from langchain_huggingface import HuggingFaceEmbeddings
 
-def criar_banco_vetorial():
-    caminho_pdf = "data/Relatorio_Bedaquilina_TB_RR_MDR_XDR_546_2020_final.pdf"
-    
-    # 1. Puxa os textos extraídos do script anterior
-    print("1. Processando o PDF...")
-    _, chunks_brutos = processar_pdf(caminho_pdf)
-    
-    if not chunks_brutos:
-        print("Erro: Nenhum chunk retornado. Verifique seu PDF.")
-        return
+from ingest import processar_pdf
 
-    # 2. Converte nossos dicionários para o formato 'Document' do LangChain
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+COLLECTION = "regulatory_reports"
+
+
+def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
+    origem = Path(diretorio)
+    arquivos = sorted(origem.glob("*.pdf")) if origem.is_dir() else ([origem] if origem.is_file() else [])
+    if not arquivos:
+        raise FileNotFoundError(f"Nenhum PDF encontrado em: {origem}")
+
     documentos = []
-    for chunk in chunks_brutos:
-        doc = Document(
-            page_content=chunk["texto"],
-            metadata=chunk["metadados"]
-        )
-        documentos.append(doc)
+    ids = []
+    for arquivo in arquivos:
+        _, chunks = processar_pdf(str(arquivo))
+        for indice, chunk in enumerate(chunks):
+            documentos.append(Document(page_content=chunk["texto"], metadata=chunk["metadados"]))
+            ids.append(f"{arquivo.name}:{indice}")
 
-    print(f"2. {len(documentos)} blocos de texto preparados para vetorização.")
+    if not documentos:
+        raise ValueError("Os PDFs não possuem texto extraível; PDFs digitalizados podem precisar de OCR.")
 
-    # 3. Inicializa o modelo de embeddings (vai baixar um modelo leve de ~80MB na 1ª vez)
-    print("3. Carregando modelo de embeddings (HuggingFace)...")
-    modelo_embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    banco = Chroma(
+        collection_name=COLLECTION,
+        persist_directory=str(pasta_db),
+        embedding_function=embeddings,
     )
+    # Upsert keeps repeated indexing idempotent instead of duplicating chunks.
+    banco.add_documents(documentos, ids=ids)
+    print(f"Indexados {len(documentos)} trechos de {len(arquivos)} arquivo(s) em {pasta_db}.")
 
-    # 4. Cria o banco vetorial e salva no disco (pasta chroma_db)
-    print("4. Vetorizando textos e salvando no ChromaDB. Isso pode levar um minutinho...")
-    pasta_db = "./chroma_db"
-    
-    vector_db = Chroma.from_documents(
-        documents=documentos,
-        embedding=modelo_embedding,
-        persist_directory=pasta_db
-    )
-
-    print(f"\n--- Sucesso! ---")
-    print(f"Banco vetorial criado e salvo na pasta '{pasta_db}'.")
-    print("Sua base de conhecimento estruturada já está pronta para receber perguntas!")
 
 if __name__ == "__main__":
-    criar_banco_vetorial()
+    parser = argparse.ArgumentParser(description="Indexa PDFs locais para busca semântica.")
+    parser.add_argument("--input", default="data", help="Diretório ou arquivo PDF")
+    parser.add_argument("--db", default="chroma_db", help="Diretório do Chroma")
+    args = parser.parse_args()
+    criar_banco_vetorial(args.input, args.db)
