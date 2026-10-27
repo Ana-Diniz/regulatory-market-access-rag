@@ -11,6 +11,13 @@ CAMPOS = ("tecnologia_avaliada", "desfecho", "ano_decisao")
 def _normalizar(texto):
     return re.sub(r"\s+", " ", str(texto)).strip().casefold()
 
+def _valor_no_trecho(valor, trecho):
+    valor_normalizado = _normalizar(valor)
+    return bool(re.search(
+        rf"(?<!\\w){re.escape(valor_normalizado)}(?!\\w)",
+        _normalizar(trecho),
+    ))
+
 
 def _fonte_rastreavel(fonte):
     """A quote without a real document and positive PDF page is not auditable."""
@@ -67,7 +74,7 @@ def auditar_extracao(extracao, fontes):
             status = "sem_fonte_verificavel"
         elif _normalizar(trecho) not in _normalizar(fonte["texto"]):
             status = "trecho_nao_localizado"
-        elif campo in ("tecnologia_avaliada", "ano_decisao") and _normalizar(valor) not in _normalizar(trecho):
+        elif campo in ("tecnologia_avaliada", "ano_decisao") and not _valor_no_trecho(valor, trecho):
             status = "valor_nao_localizado_no_trecho"
         else:
             status = "trecho_localizado"

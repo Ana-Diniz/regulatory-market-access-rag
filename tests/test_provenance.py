@@ -55,6 +55,32 @@ class ProvenanceTests(unittest.TestCase):
         dados = {"ano_decisao": {"valor": 2022, "fonte_id": "F1", "trecho": "tecnologia bedaquilina foi avaliada"}}
         self.assertEqual(auditar_extracao(dados, self.fontes)["ano_decisao"]["status"], "valor_nao_localizado_no_trecho")
 
+    def test_year_cannot_match_part_of_longer_number(self):
+        fontes = {"F1": {**self.fontes["F1"], "texto": "Publicado em 20201. Publicado em 2020."}}
+        dados = {"ano_decisao": {"valor": 2020, "fonte_id": "F1", "trecho": "Publicado em 20201"}}
+        self.assertEqual(
+            auditar_extracao(dados, fontes)["ano_decisao"]["status"],
+            "valor_nao_localizado_no_trecho",
+        )
+        dados["ano_decisao"]["trecho"] = "Publicado em 2020."
+        self.assertEqual(
+            auditar_extracao(dados, fontes)["ano_decisao"]["status"],
+            "trecho_localizado",
+        )
+
+    def test_technology_cannot_match_part_of_longer_word(self):
+        fontes = {"F1": {**self.fontes["F1"], "texto": "Bedaquilinax não é bedaquilina."}}
+        dados = {"tecnologia_avaliada": {"valor": "bedaquilina", "fonte_id": "F1", "trecho": "Bedaquilinax"}}
+        self.assertEqual(
+            auditar_extracao(dados, fontes)["tecnologia_avaliada"]["status"],
+            "valor_nao_localizado_no_trecho",
+        )
+        dados["tecnologia_avaliada"]["trecho"] = "bedaquilina."
+        self.assertEqual(
+            auditar_extracao(dados, fontes)["tecnologia_avaliada"]["status"],
+            "trecho_localizado",
+        )
+
     def test_missing_value(self):
         self.assertEqual(auditar_extracao({}, self.fontes)["desfecho"]["status"], "nao_encontrado")
 
