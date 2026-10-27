@@ -12,6 +12,22 @@ def _normalizar(texto):
     return re.sub(r"\s+", " ", str(texto)).strip().casefold()
 
 
+def _fonte_rastreavel(fonte):
+    """A quote without a real document and positive PDF page is not auditable."""
+    if not isinstance(fonte, dict):
+        return False
+    documento = fonte.get("documento")
+    pagina = fonte.get("pagina")
+    return (
+        isinstance(documento, str)
+        and bool(documento.strip())
+        and documento.strip().casefold() != "desconhecido"
+        and type(pagina) is int
+        and pagina > 0
+        and isinstance(fonte.get("texto"), str)
+    )
+
+
 def preparar_contexto(documentos):
     """Build a numbered context and an immutable-to-LLM source lookup."""
     blocos = []
@@ -32,7 +48,7 @@ def preparar_contexto(documentos):
 
 
 def auditar_extracao(extracao, fontes):
-    """Return only fields with quotes located in the claimed source.
+    """Return only fields with quotes located in a traceable source.
 
     For technology and year, the value must also appear in the quote.
     Outcome interpretation still requires human review.
@@ -47,7 +63,7 @@ def auditar_extracao(extracao, fontes):
 
         if valor is None or (isinstance(valor, str) and not valor.strip()):
             status = "nao_encontrado"
-        elif not fonte or not trecho or not str(trecho).strip():
+        elif not _fonte_rastreavel(fonte) or not trecho or not str(trecho).strip():
             status = "sem_fonte_verificavel"
         elif _normalizar(trecho) not in _normalizar(fonte["texto"]):
             status = "trecho_nao_localizado"
