@@ -11,10 +11,11 @@ CAMPOS = ("tecnologia_avaliada", "desfecho", "ano_decisao")
 def _normalizar(texto):
     return re.sub(r"\s+", " ", str(texto)).strip().casefold()
 
+
 def _valor_no_trecho(valor, trecho):
     valor_normalizado = _normalizar(valor)
     return bool(re.search(
-        rf"(?<!\\w){re.escape(valor_normalizado)}(?!\\w)",
+        rf"(?<!\w){re.escape(valor_normalizado)}(?!\w)",
         _normalizar(trecho),
     ))
 
