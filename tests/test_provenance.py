@@ -42,6 +42,23 @@ class ProvenanceTests(unittest.TestCase):
     def test_missing_value(self):
         self.assertEqual(auditar_extracao({}, self.fontes)["desfecho"]["status"], "nao_encontrado")
 
+    def test_missing_or_invalid_page_cannot_verify_quote(self):
+        dados = {"tecnologia_avaliada": {"valor": "bedaquilina", "fonte_id": "F1", "trecho": "tecnologia bedaquilina"}}
+        for pagina in (None, 0, -2, "7", True):
+            with self.subTest(pagina=pagina):
+                fonte = {**self.fontes["F1"], "pagina": pagina}
+                resultado = auditar_extracao(dados, {"F1": fonte})["tecnologia_avaliada"]
+                self.assertEqual(resultado["status"], "sem_fonte_verificavel")
+                self.assertIsNone(resultado["fonte"])
+
+    def test_unknown_document_cannot_verify_quote(self):
+        dados = {"tecnologia_avaliada": {"valor": "bedaquilina", "fonte_id": "F1", "trecho": "tecnologia bedaquilina"}}
+        for nome in ("", "   ", "desconhecido"):
+            with self.subTest(nome=nome):
+                fonte = {**self.fontes["F1"], "documento": nome}
+                resultado = auditar_extracao(dados, {"F1": fonte})["tecnologia_avaliada"]
+                self.assertEqual(resultado["status"], "sem_fonte_verificavel")
+
 
 if __name__ == "__main__":
     unittest.main()
