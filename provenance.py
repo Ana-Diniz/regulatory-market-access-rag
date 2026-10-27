@@ -40,9 +40,9 @@ def preparar_contexto(documentos):
             "pagina": metadados.get("pagina"),
             "texto": documento.page_content,
         }
+        # File paths stay in the local audit map, never in the LLM prompt.
         blocos.append(
-            f"[{identificador}] Documento: {fontes[identificador]['documento']} | "
-            f"Página: {fontes[identificador]['pagina']}\n{documento.page_content}"
+            f"[{identificador}] Página: {fontes[identificador]['pagina']}\n{documento.page_content}"
         )
     return "\n\n".join(blocos), fontes
 

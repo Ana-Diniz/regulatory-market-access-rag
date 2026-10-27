@@ -11,7 +11,7 @@ Protótipo de recuperação e extração estruturada de informações em relató
 3. `extract.py`: recupera trechos da **mesma coleção**, solicita saída tipada ao modelo Groq e associa cada campo a um ID de fonte e trecho literal.
 4. `schemas.py` e `provenance.py`: validam formato, valores permitidos e se o trecho citado aparece na fonte recuperada.
 
-**Privacidade:** o PDF e os embeddings são processados localmente, mas o **texto dos trechos recuperados é enviado à API Groq** para extração. Não envie documentos confidenciais sem autorização e avaliação dos termos do provedor.
+**Privacidade:** o PDF e os embeddings são processados localmente, mas o **texto dos trechos recuperados é enviado à API Groq** para extração. Os caminhos locais dos arquivos ficam apenas no mapa de auditoria local; o prompt externo contém IDs de fonte e páginas, sem os caminhos dos arquivos. Não envie documentos confidenciais sem autorização e avaliação dos termos do provedor.
 
 ## Requisitos e execução
 

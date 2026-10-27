@@ -16,8 +16,24 @@ class ProvenanceTests(unittest.TestCase):
         self.contexto, self.fontes = preparar_contexto(documentos)
 
     def test_context_includes_page_and_source_identifier(self):
-        self.assertIn("[F1] Documento: relatorio.pdf | Página: 7", self.contexto)
+        self.assertIn("[F1] Página: 7", self.contexto)
         self.assertEqual(self.fontes["F1"]["pagina"], 7)
+
+    def test_local_file_path_is_not_sent_in_context(self):
+        caminho = "/home/usuario/documentos/confidencial/relatorio.pdf"
+        documentos = [
+            SimpleNamespace(
+                page_content="Trecho de exemplo para auditoria.",
+                metadata={"documento": caminho, "pagina": 4},
+            )
+        ]
+        contexto, fontes = preparar_contexto(documentos)
+        self.assertIn("[F1] Página: 4", contexto)
+        self.assertNotIn(caminho, contexto)
+        self.assertNotIn("relatorio.pdf", contexto)
+        # The local lookup still retains the original path for auditing.
+        self.assertEqual(fontes["F1"]["documento"], caminho)
+        self.assertEqual(fontes["F1"]["pagina"], 4)
 
     def test_quote_and_value_found(self):
         dados = {"ano_decisao": {"valor": 2020, "fonte_id": "F1", "trecho": "Em 2020, a tecnologia bedaquilina"}}
