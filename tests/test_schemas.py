@@ -35,6 +35,35 @@ class SchemaTests(unittest.TestCase):
         dados["ano_decisao"] = {"valor": None, "fonte_id": None, "trecho": None}
         self.assertIsNone(DecisaoRegulatoria.model_validate(dados).ano_decisao.valor)
 
+    def test_year_string_is_not_silently_coerced(self):
+        dados = exemplo()
+        dados["ano_decisao"]["valor"] = "2020"
+        with self.assertRaises(ValidationError):
+            DecisaoRegulatoria.model_validate(dados)
+
+    def test_malformed_source_identifier_is_rejected(self):
+        for fonte_id in ("F0", "F-1", "7", "F01", ""):
+            with self.subTest(fonte_id=fonte_id):
+                dados = exemplo()
+                dados["tecnologia_avaliada"]["fonte_id"] = fonte_id
+                if fonte_id == "F01":
+                    # F01 is syntactically rejected to avoid ambiguous aliases.
+                    pass
+                with self.assertRaises(ValidationError):
+                    DecisaoRegulatoria.model_validate(dados)
+
+    def test_unexpected_nested_fields_are_rejected(self):
+        dados = exemplo()
+        dados["desfecho"]["confianca"] = 0.99
+        with self.assertRaises(ValidationError):
+            DecisaoRegulatoria.model_validate(dados)
+
+    def test_unexpected_top_level_fields_are_rejected(self):
+        dados = exemplo()
+        dados["resumo"] = "Sem fonte"
+        with self.assertRaises(ValidationError):
+            DecisaoRegulatoria.model_validate(dados)
+
 
 if __name__ == "__main__":
     unittest.main()
