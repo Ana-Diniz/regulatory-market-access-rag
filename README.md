@@ -35,6 +35,14 @@ python extract.py --db chroma_db --k 6
 
 É possível indexar um único PDF com `--input data/arquivo.pdf` e escolher um modelo Groq disponível usando `--model` ou `GROQ_MODEL`.
 
+**Ao indexar vários PDFs**, selecione o relatório para a extração, evitando misturar evidências de documentos diferentes:
+
+```bash
+python extract.py --db chroma_db --k 6 --document data/arquivo.pdf
+```
+
+O caminho de `--document` deve corresponder a um PDF já indexado. Se houver apenas um relatório no banco, a seleção é automática. Com mais de um relatório, `--document` é obrigatório. A recuperação usa um filtro por documento antes de selecionar os trechos.
+
 O programa imprime um JSON com `tecnologia_avaliada`, `desfecho` e `ano_decisao`. Cada campo inclui `valor`, `status`, `fonte` (ID, documento e página) e `trecho`. Um campo só mantém o valor se o trecho informado estiver presente na fonte indicada; caso contrário, `valor` é `null`.
 
 O status `trecho_localizado` confirma apenas uma correspondência textual; não verifica automaticamente a interpretação clínica ou regulatória. O ano representa a **publicação do relatório**, não necessariamente a decisão administrativa final.

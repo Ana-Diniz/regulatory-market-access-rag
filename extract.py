@@ -11,6 +11,7 @@ from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 
 from build_db import COLLECTION, EMBEDDING_MODEL
+from document_scope import recuperar_documentos
 from provenance import auditar_extracao, preparar_contexto
 from schemas import DecisaoRegulatoria
 
@@ -18,7 +19,7 @@ QUERY = "RESUMO EXECUTIVO tecnologia indicação recomendação final incorpora�
 DEFAULT_MODEL = "qwen/qwen3.8-27b"
 
 
-def buscar_contexto(pergunta=QUERY, pasta_db="chroma_db", k=6):
+def buscar_contexto(pergunta=QUERY, pasta_db="chroma_db", k=6, documento=None):
     if k < 1:
         raise ValueError("k deve ser maior que zero")
     if not Path(pasta_db).is_dir():
@@ -30,18 +31,15 @@ def buscar_contexto(pergunta=QUERY, pasta_db="chroma_db", k=6):
         persist_directory=str(pasta_db),
         embedding_function=embedding,
     )
-    documentos = banco.similarity_search(pergunta, k=k)
-    if not documentos:
-        raise RuntimeError("Nenhuma evidência recuperada. Verifique se os PDFs foram indexados.")
-    return documentos
+    return recuperar_documentos(banco, pergunta, k=k, documento=documento)
 
 
-def extrair_dados(pasta_db="chroma_db", k=6, modelo=None):
+def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None):
     load_dotenv()
     if not os.getenv("GROQ_API_KEY"):
         raise EnvironmentError("GROQ_API_KEY ausente. Configure a variável no ambiente ou no .env.")
 
-    documentos = buscar_contexto(pasta_db=pasta_db, k=k)
+    documentos = buscar_contexto(pasta_db=pasta_db, k=k, documento=documento)
     contexto, fontes = preparar_contexto(documentos)
 
     prompt = ChatPromptTemplate.from_messages([
@@ -68,5 +66,6 @@ if __name__ == "__main__":
     parser.add_argument("--db", default="chroma_db", help="Diretório do banco Chroma")
     parser.add_argument("--k", type=int, default=6, help="Quantidade de trechos recuperados")
     parser.add_argument("--model", default=None, help="Modelo disponível na conta Groq")
+    parser.add_argument("--document", default=None, help="Caminho do PDF indexado a consultar")
     args = parser.parse_args()
-    extrair_dados(pasta_db=args.db, k=args.k, modelo=args.model)
+    extrair_dados(pasta_db=args.db, k=args.k, modelo=args.model, documento=args.document)
