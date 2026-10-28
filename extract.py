@@ -17,6 +17,8 @@ from schemas import DecisaoRegulatoria
 
 QUERY = "RESUMO EXECUTIVO tecnologia indicação recomendação final incorporação SUS"
 DEFAULT_MODEL = "qwen/qwen3.8-27b"
+# Reserve headroom under providers with an output-token-per-minute quota of 1,000.
+MAX_OUTPUT_TOKENS = 700
 
 
 def buscar_contexto(pergunta=QUERY, pasta_db="chroma_db", k=6, documento=None):
@@ -34,7 +36,10 @@ def buscar_contexto(pergunta=QUERY, pasta_db="chroma_db", k=6, documento=None):
     return recuperar_documentos(banco, pergunta, k=k, documento=documento)
 
 
-def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None, pergunta=QUERY):
+def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None,
+                 pergunta=QUERY, max_output_tokens=MAX_OUTPUT_TOKENS):
+    if max_output_tokens < 1:
+        raise ValueError("max_output_tokens deve ser maior que zero")
     load_dotenv()
     if not os.getenv("GROQ_API_KEY"):
         raise EnvironmentError("GROQ_API_KEY ausente. Configure a variável no ambiente ou no .env.")
@@ -51,7 +56,11 @@ def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None, pergun
          "Não invente páginas, citações ou valores."),
         ("user", "Fontes numeradas:\n{contexto}\n\nExtraia os campos solicitados."),
     ])
-    llm = ChatGroq(model=modelo or os.getenv("GROQ_MODEL", DEFAULT_MODEL), temperature=0)
+    llm = ChatGroq(
+        model=modelo or os.getenv("GROQ_MODEL", DEFAULT_MODEL),
+        temperature=0,
+        max_tokens=max_output_tokens,
+    )
     resposta = (prompt | llm.with_structured_output(DecisaoRegulatoria)).invoke({"contexto": contexto})
     if resposta is None:
         raise RuntimeError("O modelo não retornou dados estruturados.")
@@ -69,5 +78,9 @@ if __name__ == "__main__":
     parser.add_argument("--model", default=None, help="Modelo disponível na conta Groq")
     parser.add_argument("--document", default=None, help="Caminho do PDF indexado a consultar")
     parser.add_argument("--query", default=QUERY, help="Consulta usada para recuperar evidências")
+    parser.add_argument("--max-output-tokens", type=int, default=MAX_OUTPUT_TOKENS,
+                        help="Limite de tokens de saída da Groq (padrão: 700)")
     args = parser.parse_args()
-    extrair_dados(pasta_db=args.db, k=args.k, modelo=args.model, documento=args.document, pergunta=args.query)
+    extrair_dados(pasta_db=args.db, k=args.k, modelo=args.model,
+                 documento=args.document, pergunta=args.query,
+                 max_output_tokens=args.max_output_tokens)
