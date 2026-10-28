@@ -33,6 +33,19 @@ class IngestTests(unittest.TestCase):
             self.assertTrue(all(c["metadados"]["sha256_pdf"] == sha256_arquivo(caminho) for c in chunks))
             self.assertIn("bedaquilina", chunks[0]["texto"])
 
+    def test_pdf_modified_during_extraction_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "alterado.pdf"
+            with pymupdf.open() as pdf:
+                pagina = pdf.new_page()
+                pagina.insert_text((72, 72), "Relatorio original")
+                pdf.save(str(caminho))
+
+            with patch("ingest.sha256_arquivo", side_effect=["0" * 64, "1" * 64]) as hash_pdf:
+                with self.assertRaisesRegex(RuntimeError, "alterado durante a leitura"):
+                    processar_pdf(caminho)
+            self.assertEqual(hash_pdf.call_count, 2)
+
     def test_empty_pdf_returns_no_chunks_without_index_error(self):
         with tempfile.TemporaryDirectory() as tmp:
             caminho = Path(tmp) / "vazio.pdf"

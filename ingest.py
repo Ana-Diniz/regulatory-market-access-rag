@@ -33,6 +33,13 @@ def processar_pdf(caminho_pdf):
                     },
                 })
 
+    try:
+        hash_final = sha256_arquivo(caminho)
+    except OSError as erro:
+        raise RuntimeError("PDF indisponível após a leitura; repita a indexação.") from erro
+    if hash_final != identificador_pdf:
+        raise RuntimeError("PDF alterado durante a leitura; repita a indexação.")
+
     quebrador = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
