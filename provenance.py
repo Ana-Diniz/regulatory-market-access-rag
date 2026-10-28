@@ -20,6 +20,14 @@ def _ocorrencia_delimitada(texto_procurado, texto_fonte):
     ))
 
 
+def _contem_contexto_decisao(trecho):
+    """Do not accept a report cover year as evidence of a dated decision."""
+    return bool(re.search(
+        r"\\b(?:delibera\\w*|decis(?:ã|a)o|reuni(?:ã|a)o|portaria|resolu\\w*)\\b",
+        _normalizar(trecho),
+    ))
+
+
 def _fonte_rastreavel(fonte):
     """A quote without a real document and positive PDF page is not auditable."""
     if not isinstance(fonte, dict):
@@ -77,6 +85,8 @@ def auditar_extracao(extracao, fontes):
             status = "trecho_nao_localizado"
         elif campo in ("tecnologia_avaliada", "indicacao_clinica", "ano_relatorio", "ano_decisao") and not _ocorrencia_delimitada(valor, trecho):
             status = "valor_nao_localizado_no_trecho"
+        elif campo == "ano_decisao" and not _contem_contexto_decisao(trecho):
+            status = "sem_contexto_decisao"
         else:
             status = "trecho_localizado"
 
