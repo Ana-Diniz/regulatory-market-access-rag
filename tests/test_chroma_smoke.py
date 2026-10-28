@@ -47,7 +47,7 @@ class ChromaSmokeTests(unittest.TestCase):
                 embedding_function=DeterministicEmbeddings(),
             )
             fontes = [
-                ("bedaquilina.pdf", "Bedaquilina. Recomendacao condicionada. Ano 2020."),
+                ("bedaquilina.pdf", "Bedaquilina para tuberculose multirresistente. Recomendacao condicionada. Relatorio 2020. Deliberaram em 2020."),
                 ("trastuzumabe.pdf", "Trastuzumabe. Recomendacao favoravel. Ano 2022."),
             ]
             documentos = []
@@ -93,15 +93,25 @@ class ChromaSmokeTests(unittest.TestCase):
                     "fonte_id": "F1",
                     "trecho": "Bedaquilina",
                 },
+                "indicacao_clinica": {
+                    "valor": "tuberculose multirresistente",
+                    "fonte_id": "F1",
+                    "trecho": "tuberculose multirresistente",
+                },
                 "desfecho": {
                     "valor": "Condicionado",
                     "fonte_id": "F1",
                     "trecho": "Recomendacao condicionada",
                 },
+                "ano_relatorio": {
+                    "valor": 2020,
+                    "fonte_id": "F1",
+                    "trecho": "Relatorio 2020",
+                },
                 "ano_decisao": {
                     "valor": 2020,
                     "fonte_id": "F1",
-                    "trecho": "Ano 2020",
+                    "trecho": "Deliberaram em 2020",
                 },
             }, mapa)
             self.assertTrue(all(
