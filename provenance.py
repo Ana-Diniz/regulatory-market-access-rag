@@ -12,11 +12,11 @@ def _normalizar(texto):
     return re.sub(r"\s+", " ", str(texto)).strip().casefold()
 
 
-def _valor_no_trecho(valor, trecho):
-    valor_normalizado = _normalizar(valor)
-    return bool(re.search(
-        rf"(?<!\w){re.escape(valor_normalizado)}(?!\w)",
-        _normalizar(trecho),
+def _ocorrencia_delimitada(texto_procurado, texto_fonte):
+    procurado = _normalizar(texto_procurado)
+    return bool(procurado and re.search(
+        rf"(?<!\w){re.escape(procurado)}(?!\w)",
+        _normalizar(texto_fonte),
     ))
 
 
@@ -73,9 +73,9 @@ def auditar_extracao(extracao, fontes):
             status = "nao_encontrado"
         elif not _fonte_rastreavel(fonte) or not trecho or not str(trecho).strip():
             status = "sem_fonte_verificavel"
-        elif _normalizar(trecho) not in _normalizar(fonte["texto"]):
+        elif not _ocorrencia_delimitada(trecho, fonte["texto"]):
             status = "trecho_nao_localizado"
-        elif campo in ("tecnologia_avaliada", "ano_decisao") and not _valor_no_trecho(valor, trecho):
+        elif campo in ("tecnologia_avaliada", "ano_decisao") and not _ocorrencia_delimitada(valor, trecho):
             status = "valor_nao_localizado_no_trecho"
         else:
             status = "trecho_localizado"

@@ -81,6 +81,19 @@ class ProvenanceTests(unittest.TestCase):
             "trecho_localizado",
         )
 
+    def test_quote_must_not_be_substring_of_longer_source_token(self):
+        casos = (
+            ("ano_decisao", 2020, "2020", "Publicado em 20201."),
+            ("tecnologia_avaliada", "bedaquilina", "bedaquilina", "A bedaquilinax foi avaliada."),
+        )
+        for campo, valor, trecho, texto_fonte in casos:
+            with self.subTest(campo=campo):
+                fontes = {"F1": {**self.fontes["F1"], "texto": texto_fonte}}
+                dados = {campo: {"valor": valor, "fonte_id": "F1", "trecho": trecho}}
+                resultado = auditar_extracao(dados, fontes)[campo]
+                self.assertEqual(resultado["status"], "trecho_nao_localizado")
+                self.assertIsNone(resultado["valor"])
+
     def test_missing_value(self):
         self.assertEqual(auditar_extracao({}, self.fontes)["desfecho"]["status"], "nao_encontrado")
 
