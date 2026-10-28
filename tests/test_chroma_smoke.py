@@ -12,6 +12,7 @@ from ingest import processar_pdf
 from provenance import auditar_extracao, preparar_contexto
 
 try:
+    import chromadb
     from langchain_chroma import Chroma
     from langchain_core.documents import Document
 except ImportError:
@@ -36,11 +37,13 @@ class DeterministicEmbeddings:
 @unittest.skipUnless(Chroma is not None, "langchain-chroma não instalado")
 class ChromaSmokeTests(unittest.TestCase):
     def test_pdf_ingestion_index_retrieval_and_evidence_audit(self):
-        with tempfile.TemporaryDirectory() as pasta:
+        with tempfile.TemporaryDirectory() as pasta, chromadb.PersistentClient(
+            path=str(Path(pasta) / "db")
+        ) as client:
             raiz = Path(pasta)
             banco = Chroma(
                 collection_name="regulatory_smoke",
-                persist_directory=str(raiz / "db"),
+                client=client,
                 embedding_function=DeterministicEmbeddings(),
             )
             fontes = [
