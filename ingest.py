@@ -3,6 +3,8 @@
 import argparse
 from pathlib import Path
 
+from file_integrity import sha256_arquivo
+
 import pymupdf
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -15,6 +17,7 @@ def processar_pdf(caminho_pdf):
         raise ValueError(f"O arquivo informado não é um PDF: {caminho}")
 
     print(f"Lendo o documento: {caminho}...")
+    identificador_pdf = sha256_arquivo(caminho)
     textos_extraidos = []
     # Closing the PDF also when extraction fails avoids leaked file handles.
     with pymupdf.open(str(caminho)) as documento:
@@ -26,6 +29,7 @@ def processar_pdf(caminho_pdf):
                     "metadados": {
                         "documento": str(caminho.resolve()),
                         "pagina": numero_pagina + 1,
+                        "sha256_pdf": identificador_pdf,
                     },
                 })
 

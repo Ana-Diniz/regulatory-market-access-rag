@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pymupdf
 
+from file_integrity import sha256_arquivo
 from ingest import main, processar_pdf
 
 
@@ -25,9 +26,11 @@ class IngestTests(unittest.TestCase):
             paginas, chunks = processar_pdf(caminho)
             self.assertEqual(len(paginas), 1)
             self.assertEqual(paginas[0]["metadados"]["pagina"], 2)
+            self.assertEqual(paginas[0]["metadados"]["sha256_pdf"], sha256_arquivo(caminho))
             self.assertEqual(paginas[0]["metadados"]["documento"], str(caminho.resolve()))
             self.assertTrue(chunks)
             self.assertTrue(all(c["metadados"]["pagina"] == 2 for c in chunks))
+            self.assertTrue(all(c["metadados"]["sha256_pdf"] == sha256_arquivo(caminho) for c in chunks))
             self.assertIn("bedaquilina", chunks[0]["texto"])
 
     def test_empty_pdf_returns_no_chunks_without_index_error(self):
