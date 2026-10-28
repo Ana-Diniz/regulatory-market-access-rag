@@ -24,7 +24,11 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   chroma-smoke:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
@@ -33,6 +37,6 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install local integration dependencies
-        run: python -m pip install "pymupdf>=1.24,<2" "langchain-text-splitters>=0.3,<2" "langchain-chroma>=0.1,<2"
+        run: python -m pip install "pymupdf>=1.24,<2" "langchain-text-splitters>=0.3,<2" "langchain-chroma>=0.1,<2" "chromadb>=1.5,<2"
       - name: Exercise real Chroma persistence and scoped retrieval
         run: python -m unittest discover -s tests -p "test_chroma_smoke.py" -v
