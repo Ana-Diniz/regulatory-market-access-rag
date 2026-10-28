@@ -7,4 +7,4 @@ langchain-huggingface>=0.1,<2
 langchain-chroma>=0.1,<2
 langchain-groq>=0.2,<2
 sentence-transformers>=3,<6
-chromadb>=0.5,<2
+chromadb>=1.5,<2
