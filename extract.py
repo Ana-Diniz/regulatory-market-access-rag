@@ -34,12 +34,12 @@ def buscar_contexto(pergunta=QUERY, pasta_db="chroma_db", k=6, documento=None):
     return recuperar_documentos(banco, pergunta, k=k, documento=documento)
 
 
-def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None):
+def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None, pergunta=QUERY):
     load_dotenv()
     if not os.getenv("GROQ_API_KEY"):
         raise EnvironmentError("GROQ_API_KEY ausente. Configure a variável no ambiente ou no .env.")
 
-    documentos = buscar_contexto(pasta_db=pasta_db, k=k, documento=documento)
+    documentos = buscar_contexto(pergunta=pergunta, pasta_db=pasta_db, k=k, documento=documento)
     contexto, fontes = preparar_contexto(documentos)
 
     prompt = ChatPromptTemplate.from_messages([
@@ -68,5 +68,6 @@ if __name__ == "__main__":
     parser.add_argument("--k", type=int, default=6, help="Quantidade de trechos recuperados")
     parser.add_argument("--model", default=None, help="Modelo disponível na conta Groq")
     parser.add_argument("--document", default=None, help="Caminho do PDF indexado a consultar")
+    parser.add_argument("--query", default=QUERY, help="Consulta usada para recuperar evidências")
     args = parser.parse_args()
-    extrair_dados(pasta_db=args.db, k=args.k, modelo=args.model, documento=args.document)
+    extrair_dados(pasta_db=args.db, k=args.k, modelo=args.model, documento=args.document, pergunta=args.query)
