@@ -6,6 +6,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 
+from file_integrity import sha256_arquivo
 from index_ids import agrupar_ids_por_documento, chunk_id, ids_obsoletos
 from ingest import processar_pdf
 
@@ -30,11 +31,23 @@ def encontrar_pdfs(origem):
     return sorted({arquivo.resolve() for arquivo in arquivos}, key=lambda arquivo: str(arquivo).casefold())
 
 
+def validar_pdfs_inalterados(hashes_por_documento):
+    """Reject indexing when a source changes after its text was extracted."""
+    for caminho, esperado in hashes_por_documento.items():
+        try:
+            atual = sha256_arquivo(caminho)
+        except OSError as erro:
+            raise RuntimeError(f"PDF indisponível durante a indexação: {caminho}") from erro
+        if atual != esperado:
+            raise RuntimeError(f"PDF alterado durante a indexação: {caminho}")
+
+
 def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
     arquivos = encontrar_pdfs(diretorio)
     documentos = []
     ids = []
     ids_por_documento = {}
+    hashes_por_documento = {}
 
     for arquivo in arquivos:
         _, chunks = processar_pdf(str(arquivo))
@@ -43,6 +56,7 @@ def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
                 f"PDF sem texto extraível: {arquivo}. "
                 "PDFs digitalizados podem precisar de OCR."
             )
+        hashes_por_documento[arquivo] = chunks[0]["metadados"]["sha256_pdf"]
         ids_arquivo = []
         for indice, chunk in enumerate(chunks):
             documentos.append(Document(
@@ -55,6 +69,7 @@ def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
         ids_por_documento[arquivo] = ids_arquivo
 
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    validar_pdfs_inalterados(hashes_por_documento)
     banco = Chroma(
         collection_name=COLLECTION,
         persist_directory=str(pasta_db),
@@ -68,6 +83,7 @@ def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
     )
     # Upsert first: if embedding or persistence fails, do not remove old data.
     banco.add_documents(documentos, ids=ids)
+    validar_pdfs_inalterados(hashes_por_documento)
     for caminho, atuais in ids_por_documento.items():
         obsoletos = ids_obsoletos(antigos[caminho], atuais)
         if obsoletos:
