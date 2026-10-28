@@ -26,13 +26,23 @@ class CampoAno(CampoTexto):
         strict=True,
         ge=1900,
         le=2100,
-        description="Ano inteiro da publicação ou null",
+        description="Ano inteiro comprovado pelo trecho ou null",
     )
 
 
 class DecisaoRegulatoria(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    tecnologia_avaliada: CampoTexto
+    tecnologia_avaliada: CampoTexto = Field(
+        description="Nome da tecnologia (por exemplo, Bedaquilina), sem população ou indicação."
+    )
+    indicacao_clinica: CampoTexto = Field(
+        description="Indicação clínica/população-alvo, separada do nome da tecnologia."
+    )
     desfecho: CampoDesfecho
-    ano_decisao: CampoAno
+    ano_relatorio: CampoAno = Field(
+        description="Ano de publicação do relatório, não presumido como ano da decisão."
+    )
+    ano_decisao: CampoAno = Field(
+        description="Ano da deliberação ou decisão, somente com evidência específica; caso contrário null."
+    )
