@@ -49,11 +49,18 @@ def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None,
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "Você é um analista de Market Access. Use somente as fontes fornecidas. "
-         "Para cada campo, informe valor, fonte_id e um trecho LITERAL da fonte. "
+         "Extraia cinco campos independentes, sempre com valor, fonte_id e trecho LITERAL curto. "
+         "tecnologia_avaliada: apenas o nome do medicamento/tecnologia, sem indicação clínica. "
+         "indicacao_clinica: população ou condição tratada; copie uma expressão exata da fonte, "
+         "sem paráfrase, para permitir conferência textual. "
+         "desfecho: Favorável, Desfavorável ou Condicionado; em recomendações condicionadas "
+         "prefira Condicionado e cite a condição explícita. "
+         "ano_relatorio: apenas o ano de publicação apresentado no relatório, por exemplo na capa. "
+         "ano_decisao: apenas o ano de uma decisão/deliberação com data explícita, "
+         "não deduza o ano da decisão a partir da capa ou do número do relatório. "
+         "Para cada ano cite um trecho que contenha o ano e seu contexto. "
          "Use null para valor, fonte_id e trecho quando não houver evidência suficiente. "
-         "Desfecho: Favorável, Desfavorável ou Condicionado. "
-         "O ano corresponde à publicação do relatório, não necessariamente à decisão final. "
-         "Não invente páginas, citações ou valores."),
+         "Não invente páginas, citações ou valores e não use fontes diferentes das fornecidas."),
         ("user", "Fontes numeradas:\n{contexto}\n\nExtraia os campos solicitados."),
     ])
     llm = ChatGroq(
