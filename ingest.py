@@ -24,7 +24,7 @@ def processar_pdf(caminho_pdf):
                 textos_extraidos.append({
                     "texto": texto,
                     "metadados": {
-                        "documento": str(caminho),
+                        "documento": str(caminho.resolve()),
                         "pagina": numero_pagina + 1,
                     },
                 })

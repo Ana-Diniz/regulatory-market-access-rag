@@ -25,6 +25,7 @@ class IngestTests(unittest.TestCase):
             paginas, chunks = processar_pdf(caminho)
             self.assertEqual(len(paginas), 1)
             self.assertEqual(paginas[0]["metadados"]["pagina"], 2)
+            self.assertEqual(paginas[0]["metadados"]["documento"], str(caminho.resolve()))
             self.assertTrue(chunks)
             self.assertTrue(all(c["metadados"]["pagina"] == 2 for c in chunks))
             self.assertIn("bedaquilina", chunks[0]["texto"])

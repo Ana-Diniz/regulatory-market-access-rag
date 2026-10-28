@@ -1,9 +1,10 @@
 """Offline regression tests for stable IDs and safe reindex cleanup."""
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
-from index_ids import chunk_id, ids_obsoletos
+from index_ids import agrupar_ids_por_documento, chunk_id, ids_obsoletos
 
 
 class IndexIdsTests(unittest.TestCase):
@@ -36,6 +37,24 @@ class IndexIdsTests(unittest.TestCase):
     def test_no_deletion_when_all_existing_ids_are_current(self):
         atuais = [chunk_id("report.pdf", 0)]
         self.assertEqual(ids_obsoletos(atuais, atuais), [])
+
+    def test_relative_and_absolute_metadata_find_same_old_chunks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pdf = Path(tmp) / "report.pdf"
+            relative = Path(os.path.relpath(pdf))
+            ids = ["old:0", "old:1", "other:0"]
+            metadados = [
+                {"documento": str(relative)},
+                {"documento": str(pdf)},
+                {"documento": str(Path(tmp) / "other.pdf")},
+            ]
+            encontrados = agrupar_ids_por_documento(ids, metadados, [pdf])
+            self.assertEqual(encontrados[pdf.resolve()], ["old:0", "old:1"])
+            self.assertEqual(ids_obsoletos(encontrados[pdf.resolve()], ["old:0"]), ["old:1"])
+
+    def test_mismatched_index_metadata_is_rejected(self):
+        with self.assertRaises(ValueError):
+            agrupar_ids_por_documento(["a", "b"], [{}], ["report.pdf"])
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from index_ids import chunk_id, ids_obsoletos
+from index_ids import agrupar_ids_por_documento, chunk_id, ids_obsoletos
 from ingest import processar_pdf
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -27,7 +27,7 @@ def encontrar_pdfs(origem):
         arquivos = []
     if not arquivos:
         raise FileNotFoundError(f"Nenhum PDF encontrado em: {caminho}")
-    return arquivos
+    return sorted({arquivo.resolve() for arquivo in arquivos}, key=lambda arquivo: str(arquivo).casefold())
 
 
 def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
@@ -52,7 +52,7 @@ def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
             identificador = chunk_id(arquivo, indice)
             ids.append(identificador)
             ids_arquivo.append(identificador)
-        ids_por_documento[str(arquivo)] = ids_arquivo
+        ids_por_documento[arquivo] = ids_arquivo
 
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
     banco = Chroma(
@@ -61,11 +61,11 @@ def criar_banco_vetorial(diretorio="data", pasta_db="chroma_db"):
         embedding_function=embeddings,
     )
 
-    # Remember old IDs, including those from the previous filename-only scheme.
-    antigos = {
-        caminho: banco.get(where={"documento": caminho})["ids"]
-        for caminho in ids_por_documento
-    }
+    # Find old IDs even when earlier runs used relative instead of absolute paths.
+    existentes = banco.get(include=["metadatas"])
+    antigos = agrupar_ids_por_documento(
+        existentes["ids"], existentes["metadatas"], ids_por_documento
+    )
     # Upsert first: if embedding or persistence fails, do not remove old data.
     banco.add_documents(documentos, ids=ids)
     for caminho, atuais in ids_por_documento.items():
