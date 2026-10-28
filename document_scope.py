@@ -37,4 +37,15 @@ def recuperar_documentos(banco, pergunta, k=6, documento=None):
     documentos = banco.similarity_search(pergunta, k=k, filter={"documento": selecionado})
     if not documentos:
         raise RuntimeError("Nenhuma evidência recuperada para o PDF selecionado.")
+
+    for trecho in documentos:
+        metadata = getattr(trecho, "metadata", None)
+        if not isinstance(metadata, dict) or metadata.get("documento") != selecionado:
+            raise RuntimeError("Busca retornou evidência sem identificação do PDF selecionado; reindexe.")
+        pagina = metadata.get("pagina")
+        if type(pagina) is not int or pagina < 1:
+            raise RuntimeError("Busca retornou evidência sem página válida; reindexe.")
+        texto = getattr(trecho, "page_content", None)
+        if not isinstance(texto, str) or not texto.strip():
+            raise RuntimeError("Busca retornou evidência sem texto extraível; reindexe.")
     return documentos
