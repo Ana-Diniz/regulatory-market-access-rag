@@ -47,7 +47,7 @@ class ChromaSmokeTests(unittest.TestCase):
                 embedding_function=DeterministicEmbeddings(),
             )
             fontes = [
-                ("bedaquilina.pdf", "Bedaquilina para tuberculose multirresistente. Recomendacao condicionada. Relatorio 2020. Deliberaram em 2020."),
+                ("bedaquilina.pdf", "Bedaquilina para tuberculose multirresistente.\nRecomendacao condicionada.\nRelatorio 2020.\nDeliberaram em 2020."),
                 ("trastuzumabe.pdf", "Trastuzumabe. Recomendacao favoravel. Ano 2022."),
             ]
             documentos = []
