@@ -80,4 +80,11 @@ def recuperar_documentos(banco, pergunta, k=6, documento=None):
         texto = getattr(trecho, "page_content", None)
         if not isinstance(texto, str) or not texto.strip():
             raise RuntimeError("Busca retornou evidência sem texto extraível; reindexe.")
+    if hash_esperado is not None:
+        try:
+            hash_final = sha256_arquivo(selecionado)
+        except OSError as erro:
+            raise RuntimeError("PDF original indisponível durante a recuperação; reindexe.") from erro
+        if hash_final != hash_esperado:
+            raise RuntimeError("PDF original foi alterado durante a recuperação; reindexe.")
     return documentos

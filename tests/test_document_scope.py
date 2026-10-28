@@ -137,6 +137,50 @@ class DocumentScopeTests(unittest.TestCase):
                         recuperar_documentos(banco, "question")
             banco.similarity_search.assert_not_called()
 
+    def test_pdf_modified_during_vector_search_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"indexed PDF")
+            esperado = sha256_arquivo(caminho)
+            banco = Mock()
+            banco.get.return_value = {
+                "metadatas": [{"documento": str(caminho), "sha256_pdf": esperado}]
+            }
+            trecho = SimpleNamespace(
+                metadata={"documento": str(caminho), "pagina": 1, "sha256_pdf": esperado},
+                page_content="Recomendacao do relatorio.",
+            )
+
+            def alterar_durante_busca(*args, **kwargs):
+                caminho.write_bytes(b"changed PDF")
+                return [trecho]
+
+            banco.similarity_search.side_effect = alterar_durante_busca
+            with self.assertRaisesRegex(RuntimeError, "alterado durante a recuperação"):
+                recuperar_documentos(banco, "question")
+
+    def test_pdf_removed_during_vector_search_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"indexed PDF")
+            esperado = sha256_arquivo(caminho)
+            banco = Mock()
+            banco.get.return_value = {
+                "metadatas": [{"documento": str(caminho), "sha256_pdf": esperado}]
+            }
+            trecho = SimpleNamespace(
+                metadata={"documento": str(caminho), "pagina": 1, "sha256_pdf": esperado},
+                page_content="Recomendacao do relatorio.",
+            )
+
+            def remover_durante_busca(*args, **kwargs):
+                caminho.unlink()
+                return [trecho]
+
+            banco.similarity_search.side_effect = remover_durante_busca
+            with self.assertRaisesRegex(RuntimeError, "indisponível durante a recuperação"):
+                recuperar_documentos(banco, "question")
+
     def test_matching_fingerprint_allows_retrieval_but_rejects_wrong_chunk_version(self):
         with tempfile.TemporaryDirectory() as tmp:
             caminho = Path(tmp) / "report.pdf"
