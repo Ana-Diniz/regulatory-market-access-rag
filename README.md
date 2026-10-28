@@ -33,7 +33,9 @@ python build_db.py --input data --db chroma_db
 python extract.py --db chroma_db --k 6
 ```
 
-É possível indexar um único PDF com `--input data/arquivo.pdf` e escolher um modelo Groq disponível usando `--model` ou `GROQ_MODEL`.
+É possível indexar um único PDF com `--input data/arquivo.pdf` e escolher um modelo Groq disponível usando `--model` ou `GROQ_MODEL`. O comando `extract.py` também aceita `--query` para escolher o texto da busca semântica.
+
+**Limites da Groq:** a extração reserva por padrão até **700 tokens de saída** para funcionar em contas com limite de 1.000 tokens de saída por minuto (OTPM). Pode-se ajustar com `--max-output-tokens N`, conforme a cota da conta e o tamanho do JSON esperado. Isso não altera o limite de tokens de entrada, nem garante que requisições próximas não atinjam a cota por minuto. Se a Groq responder com HTTP 429, verifique o tipo de limite e aguarde a liberação da cota, sem necessidade de recriar o banco vetorial.
 
 **Ao indexar vários PDFs**, selecione o relatório para a extração, evitando misturar evidências de documentos diferentes:
 
