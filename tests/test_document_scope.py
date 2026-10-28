@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from document_scope import recuperar_documentos, selecionar_documento
+from file_integrity import sha256_arquivo
 
 
 class DocumentScopeTests(unittest.TestCase):
@@ -90,6 +91,69 @@ class DocumentScopeTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(RuntimeError, "sem texto"):
             recuperar_documentos(banco, "question")
+
+    def test_modified_pdf_is_rejected_before_vector_search(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"first version")
+            esperado = sha256_arquivo(caminho)
+            banco = Mock()
+            banco.get.return_value = {
+                "metadatas": [{"documento": str(caminho), "sha256_pdf": esperado}]
+            }
+            caminho.write_bytes(b"second version")
+            with self.assertRaisesRegex(RuntimeError, "alterado"):
+                recuperar_documentos(banco, "question")
+            banco.similarity_search.assert_not_called()
+
+    def test_missing_pdf_is_rejected_before_vector_search(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"indexed")
+            banco = Mock()
+            banco.get.return_value = {
+                "metadatas": [{"documento": str(caminho), "sha256_pdf": sha256_arquivo(caminho)}]
+            }
+            caminho.unlink()
+            with self.assertRaisesRegex(RuntimeError, "indisponível"):
+                recuperar_documentos(banco, "question")
+            banco.similarity_search.assert_not_called()
+
+    def test_inconsistent_or_malformed_fingerprints_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"source")
+            correto = sha256_arquivo(caminho)
+            banco = Mock()
+            for hashes in ([correto, None], ["invalid"]):
+                with self.subTest(hashes=hashes):
+                    banco.get.return_value = {
+                        "metadatas": [
+                            {"documento": str(caminho), "sha256_pdf": hash_valor}
+                            for hash_valor in hashes
+                        ]
+                    }
+                    with self.assertRaisesRegex(RuntimeError, "reindexe"):
+                        recuperar_documentos(banco, "question")
+            banco.similarity_search.assert_not_called()
+
+    def test_matching_fingerprint_allows_retrieval_but_rejects_wrong_chunk_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"original PDF")
+            correto = sha256_arquivo(caminho)
+            banco = Mock()
+            banco.get.return_value = {
+                "metadatas": [{"documento": str(caminho), "sha256_pdf": correto}]
+            }
+            metadata = {"documento": str(caminho), "pagina": 1, "sha256_pdf": correto}
+            trecho = SimpleNamespace(metadata=metadata, page_content="Texto regulatório.")
+            banco.similarity_search.return_value = [trecho]
+            self.assertEqual(recuperar_documentos(banco, "question"), [trecho])
+
+            trecho.metadata = {**metadata, "sha256_pdf": "0" * 64}
+            with self.assertRaisesRegex(RuntimeError, "versão diferente"):
+                recuperar_documentos(banco, "question")
 
 
 if __name__ == "__main__":
