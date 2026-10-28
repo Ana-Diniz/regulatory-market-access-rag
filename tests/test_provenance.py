@@ -36,10 +36,10 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual(fontes["F1"]["pagina"], 4)
 
     def test_quote_and_value_found(self):
-        dados = {"ano_decisao": {"valor": 2020, "fonte_id": "F1", "trecho": "Em 2020, a tecnologia bedaquilina"}}
+        dados = {"ano_relatorio": {"valor": 2020, "fonte_id": "F1", "trecho": "Em 2020, a tecnologia bedaquilina"}}
         auditado = auditar_extracao(dados, self.fontes)
-        self.assertEqual(auditado["ano_decisao"]["status"], "trecho_localizado")
-        self.assertEqual(auditado["ano_decisao"]["fonte"]["pagina"], 7)
+        self.assertEqual(auditado["ano_relatorio"]["status"], "trecho_localizado")
+        self.assertEqual(auditado["ano_relatorio"]["fonte"]["pagina"], 7)
 
     def test_unknown_source_is_not_confirmed(self):
         dados = {"tecnologia_avaliada": {"valor": "bedaquilina", "fonte_id": "F99", "trecho": "bedaquilina"}}
@@ -48,21 +48,21 @@ class ProvenanceTests(unittest.TestCase):
         self.assertIsNone(resultado["valor"])
 
     def test_hallucinated_quote_is_rejected(self):
-        dados = {"ano_decisao": {"valor": 2022, "fonte_id": "F1", "trecho": "Publicado em 2022"}}
-        self.assertEqual(auditar_extracao(dados, self.fontes)["ano_decisao"]["status"], "trecho_nao_localizado")
+        dados = {"ano_relatorio": {"valor": 2022, "fonte_id": "F1", "trecho": "Publicado em 2022"}}
+        self.assertEqual(auditar_extracao(dados, self.fontes)["ano_relatorio"]["status"], "trecho_nao_localizado")
 
     def test_quote_must_contain_year(self):
-        dados = {"ano_decisao": {"valor": 2022, "fonte_id": "F1", "trecho": "tecnologia bedaquilina foi avaliada"}}
+        dados = {"ano_relatorio": {"valor": 2022, "fonte_id": "F1", "trecho": "tecnologia bedaquilina foi avaliada"}}
         self.assertEqual(auditar_extracao(dados, self.fontes)["ano_decisao"]["status"], "valor_nao_localizado_no_trecho")
 
     def test_year_cannot_match_part_of_longer_number(self):
         fontes = {"F1": {**self.fontes["F1"], "texto": "Publicado em 20201. Publicado em 2020."}}
-        dados = {"ano_decisao": {"valor": 2020, "fonte_id": "F1", "trecho": "Publicado em 20201"}}
+        dados = {"ano_relatorio": {"valor": 2020, "fonte_id": "F1", "trecho": "Publicado em 20201"}}
         self.assertEqual(
-            auditar_extracao(dados, fontes)["ano_decisao"]["status"],
+            auditar_extracao(dados, fontes)["ano_relatorio"]["status"],
             "valor_nao_localizado_no_trecho",
         )
-        dados["ano_decisao"]["trecho"] = "Publicado em 2020."
+        dados["ano_relatorio"]["trecho"] = "Publicado em 2020."
         self.assertEqual(
             auditar_extracao(dados, fontes)["ano_decisao"]["status"],
             "trecho_localizado",
@@ -83,7 +83,7 @@ class ProvenanceTests(unittest.TestCase):
 
     def test_quote_must_not_be_substring_of_longer_source_token(self):
         casos = (
-            ("ano_decisao", 2020, "2020", "Publicado em 20201."),
+            ("ano_relatorio", 2020, "2020", "Publicado em 20201."),
             ("tecnologia_avaliada", "bedaquilina", "bedaquilina", "A bedaquilinax foi avaliada."),
         )
         for campo, valor, trecho, texto_fonte in casos:
@@ -113,6 +113,53 @@ class ProvenanceTests(unittest.TestCase):
                 fonte = {**self.fontes["F1"], "documento": nome}
                 resultado = auditar_extracao(dados, {"F1": fonte})["tecnologia_avaliada"]
                 self.assertEqual(resultado["status"], "sem_fonte_verificavel")
+
+
+    def test_indication_must_be_in_literal_quote(self):
+        fontes = {"F1": {**self.fontes["F1"], "texto": "A indicação é tuberculose multirresistente."}}
+        dados = {"indicacao_clinica": {
+            "valor": "tuberculose multirresistente",
+            "fonte_id": "F1",
+            "trecho": "tuberculose multirresistente",
+        }}
+        self.assertEqual(auditar_extracao(dados, fontes)["indicacao_clinica"]["status"],
+                         "trecho_localizado")
+        dados["indicacao_clinica"]["valor"] = "tuberculose pulmonar"
+        self.assertEqual(auditar_extracao(dados, fontes)["indicacao_clinica"]["status"],
+                         "valor_nao_localizado_no_trecho")
+
+    def test_report_and_decision_year_require_distinct_evidence(self):
+        fontes = {
+            "F1": {"documento": "relatorio.pdf", "pagina": 1,
+                   "texto": "Nº 546 Agosto/2020"},
+            "F2": {"documento": "relatorio.pdf", "pagina": 15,
+                   "texto": "Os membros deliberaram em 05 de agosto de 2020."},
+        }
+        dados = {
+            "ano_relatorio": {"valor": 2020, "fonte_id": "F1", "trecho": "Agosto/2020"},
+            "ano_decisao": {"valor": 2020, "fonte_id": "F2",
+                            "trecho": "deliberaram em 05 de agosto de 2020"},
+        }
+        saida = auditar_extracao(dados, fontes)
+        self.assertEqual(saida["ano_relatorio"]["status"], "trecho_localizado")
+        self.assertEqual(saida["ano_decisao"]["status"], "trecho_localizado")
+        self.assertEqual(saida["ano_relatorio"]["fonte"]["pagina"], 1)
+        self.assertEqual(saida["ano_decisao"]["fonte"]["pagina"], 15)
+
+    def test_cover_year_is_not_decision_year(self):
+        fontes = {"F1": {"documento": "relatorio.pdf", "pagina": 1,
+                          "texto": "Nº 546 Agosto/2020"}}
+        dados = {"ano_decisao": {"valor": 2020, "fonte_id": "F1",
+                                 "trecho": "Agosto/2020"}}
+        resultado = auditar_extracao(dados, fontes)["ano_decisao"]
+        self.assertEqual(resultado["status"], "sem_contexto_decisao")
+        self.assertIsNone(resultado["valor"])
+
+    def test_absent_decision_year_remains_null(self):
+        dados = {"ano_decisao": {"valor": None, "fonte_id": None, "trecho": None}}
+        self.assertEqual(auditar_extracao(dados, self.fontes)["ano_decisao"]["status"],
+                         "nao_encontrado")
+        self.assertIsNone(auditar_extracao(dados, self.fontes)["ano_decisao"]["valor"])
 
 
 if __name__ == "__main__":
