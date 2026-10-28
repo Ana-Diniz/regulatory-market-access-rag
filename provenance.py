@@ -5,7 +5,7 @@ A located quote is not proof that the model interpreted it correctly.
 
 import re
 
-CAMPOS = ("tecnologia_avaliada", "desfecho", "ano_decisao")
+CAMPOS = ("tecnologia_avaliada", "indicacao_clinica", "desfecho", "ano_relatorio", "ano_decisao")
 
 
 def _normalizar(texto):
@@ -58,7 +58,7 @@ def preparar_contexto(documentos):
 def auditar_extracao(extracao, fontes):
     """Return only fields with quotes located in a traceable source.
 
-    For technology and year, the value must also appear in the quote.
+    For technology, clinical indication, and each year, the value must appear in the quote.
     Outcome interpretation still requires human review.
     """
     auditados = {}
@@ -75,7 +75,7 @@ def auditar_extracao(extracao, fontes):
             status = "sem_fonte_verificavel"
         elif not _ocorrencia_delimitada(trecho, fonte["texto"]):
             status = "trecho_nao_localizado"
-        elif campo in ("tecnologia_avaliada", "ano_decisao") and not _ocorrencia_delimitada(valor, trecho):
+        elif campo in ("tecnologia_avaliada", "indicacao_clinica", "ano_relatorio", "ano_decisao") and not _ocorrencia_delimitada(valor, trecho):
             status = "valor_nao_localizado_no_trecho"
         else:
             status = "trecho_localizado"
