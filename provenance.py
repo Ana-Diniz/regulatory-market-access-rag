@@ -23,7 +23,7 @@ def _ocorrencia_delimitada(texto_procurado, texto_fonte):
 def _contem_contexto_decisao(trecho):
     """Do not accept a report cover year as evidence of a dated decision."""
     return bool(re.search(
-        r"\\b(?:delibera\\w*|decis(?:ã|a)o|reuni(?:ã|a)o|portaria|resolu\\w*)\\b",
+        r"\b(?:delibera\w*|decis(?:ã|a)o|reuni(?:ã|a)o|portaria|resolu\w*)\b",
         _normalizar(trecho),
     ))
 
