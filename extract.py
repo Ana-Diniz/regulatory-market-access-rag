@@ -11,7 +11,7 @@ from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 
 from build_db import COLLECTION, EMBEDDING_MODEL
-from document_scope import recuperar_documentos
+from document_scope import recuperar_documentos, validar_integridade_evidencias
 from provenance import auditar_extracao, preparar_contexto
 from schemas import DecisaoRegulatoria
 
@@ -56,6 +56,7 @@ def extrair_dados(pasta_db="chroma_db", k=6, modelo=None, documento=None):
     if resposta is None:
         raise RuntimeError("O modelo não retornou dados estruturados.")
 
+    validar_integridade_evidencias(documentos)
     auditado = auditar_extracao(resposta.model_dump(), fontes)
     print(json.dumps(auditado, ensure_ascii=False, indent=2))
     return auditado

@@ -58,6 +58,13 @@ def validar_integridade_documento(metadados, selecionado):
     return esperado
 
 
+def validar_integridade_evidencias(documentos):
+    """Recheck the source PDF after the language model has processed its evidence."""
+    metadados = [trecho.metadata for trecho in documentos]
+    selecionado = selecionar_documento(metadados)
+    return validar_integridade_documento(metadados, selecionado)
+
+
 def recuperar_documentos(banco, pergunta, k=6, documento=None):
     if k < 1:
         raise ValueError("k deve ser maior que zero")

@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from document_scope import recuperar_documentos, selecionar_documento
+from document_scope import recuperar_documentos, selecionar_documento, validar_integridade_evidencias
 from file_integrity import sha256_arquivo
 
 
@@ -180,6 +180,35 @@ class DocumentScopeTests(unittest.TestCase):
             banco.similarity_search.side_effect = remover_durante_busca
             with self.assertRaisesRegex(RuntimeError, "indisponível durante a recuperação"):
                 recuperar_documentos(banco, "question")
+
+    def test_post_inference_integrity_rejects_changed_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"indexed version")
+            esperado = sha256_arquivo(caminho)
+            trecho = SimpleNamespace(metadata={
+                "documento": str(caminho),
+                "pagina": 1,
+                "sha256_pdf": esperado,
+            }, page_content="Evidencia original.")
+
+            self.assertEqual(validar_integridade_evidencias([trecho]), esperado)
+            caminho.write_bytes(b"modified while model was running")
+            with self.assertRaisesRegex(RuntimeError, "alterado"):
+                validar_integridade_evidencias([trecho])
+
+    def test_post_inference_integrity_rejects_missing_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "report.pdf"
+            caminho.write_bytes(b"indexed version")
+            trecho = SimpleNamespace(metadata={
+                "documento": str(caminho),
+                "pagina": 1,
+                "sha256_pdf": sha256_arquivo(caminho),
+            }, page_content="Evidencia original.")
+            caminho.unlink()
+            with self.assertRaisesRegex(RuntimeError, "indisponível"):
+                validar_integridade_evidencias([trecho])
 
     def test_matching_fingerprint_allows_retrieval_but_rejects_wrong_chunk_version(self):
         with tempfile.TemporaryDirectory() as tmp:
