@@ -53,7 +53,7 @@ class ProvenanceTests(unittest.TestCase):
 
     def test_quote_must_contain_year(self):
         dados = {"ano_relatorio": {"valor": 2022, "fonte_id": "F1", "trecho": "tecnologia bedaquilina foi avaliada"}}
-        self.assertEqual(auditar_extracao(dados, self.fontes)["ano_decisao"]["status"], "valor_nao_localizado_no_trecho")
+        self.assertEqual(auditar_extracao(dados, self.fontes)["ano_relatorio"]["status"], "valor_nao_localizado_no_trecho")
 
     def test_year_cannot_match_part_of_longer_number(self):
         fontes = {"F1": {**self.fontes["F1"], "texto": "Publicado em 20201. Publicado em 2020."}}
@@ -64,7 +64,7 @@ class ProvenanceTests(unittest.TestCase):
         )
         dados["ano_relatorio"]["trecho"] = "Publicado em 2020."
         self.assertEqual(
-            auditar_extracao(dados, fontes)["ano_decisao"]["status"],
+            auditar_extracao(dados, fontes)["ano_relatorio"]["status"],
             "trecho_localizado",
         )
 
