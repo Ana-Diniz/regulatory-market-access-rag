@@ -57,7 +57,15 @@ Os testes unitários de proveniência e schema não usam LLM, PDFs externos ou r
 python -m unittest discover -s tests -v
 ```
 
-A execução ponta a ponta com PDF real, ChromaDB e API Groq ainda requer validação em ambiente configurado.
+**Validação ponta a ponta (28/10/2026, Windows/Python 3.11):** relatório público nº 546/2020 da Conitec, com 117 páginas (116 com texto extraível), foi dividido em 340 chunks, indexado com embeddings reais no ChromaDB e consultado via Groq. A execução manual reportada retornou `tecnologia_avaliada`, `desfecho` e `ano_decisao`, todos com `status: "trecho_localizado"`; o desfecho normalizado foi `Condicionado` com citação na página 15, e o ano `2020` foi associado à capa (página 1). Esse resultado confirma o funcionamento técnico **nesse relatório**, não uma avaliação de acurácia em múltiplos documentos.
+
+Comando utilizado (após preencher `.env` localmente):
+
+```powershell
+.\\.venv\\Scripts\\python.exe extract.py --db chroma_db --k 8 --document data\\bedaquilina.pdf --query "bedaquilina recomendação final da Conitec incorporação tuberculose resistente 2020"
+```
+
+**Observação sobre nomenclatura:** `ano_decisao` atualmente representa o **ano da publicação do relatório**, e `tecnologia_avaliada` pode incluir a indicação clínica. Uma futura revisão do schema deve separar essas informações sem invalidar testes anteriores.
 
 ## Limitações e próximos passos
 
