@@ -77,7 +77,7 @@ class ChromaSmokeTests(unittest.TestCase):
             )
             self.assertTrue(recuperados)
             self.assertTrue(all(
-                trecho.metadata["documento"] == str(caminhos[0])
+                trecho.metadata["documento"] == str(caminhos[0].resolve())
                 for trecho in recuperados
             ))
             self.assertTrue(all(
